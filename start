@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+export DATANODE_HOST="${1:-$(hostname -i 2>/dev/null || hostname)}"
+
 function error() {
     echo "[ERROR] $@" >&2
     return 1

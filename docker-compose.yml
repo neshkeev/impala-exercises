@@ -54,6 +54,8 @@ services:
         condition: service_healthy
       hive:
         condition: service_healthy
+      hadoop:
+        condition: service_healthy
     volumes:
       - *check-ports
       - ./bin/manager-entrypoint:/usr/local/bin/entrypoint
@@ -66,6 +68,7 @@ services:
       DIND_HOST: dind
       IMPALA_HOST: impala
       HIVE_HOST: hive
+      NAMENODE_HOST: hadoop
 
   dind:
     <<: *template
@@ -193,3 +196,26 @@ services:
       - *check-ports
       - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
       - impala-warehouse:/user/hive/warehouse
+
+  hadoop:
+    <<: *template
+    image: neshkeev/hadoop
+    hostname: hadoop
+    ports:
+      - "9870:9870"
+      - "9864:9864"
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 9000 9870 9864
+        # volumes:
+        #   - ./conf/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+        #   - ./conf/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+    environment:
+      CORE-SITE.XML_fs.defaultFS: hdfs://hadoop:9000
+      HDFS-SITE.XML_dfs.replication: 1
+      HDFS-SITE.XML_dfs.permissions: false
+      HDFS-SITE.XML_dfs.datanode.hostname: localhost
+      MAPRED-SITE.XML_mapreduce.framework.name: yarn
+      MAPRED-SITE.XML_mapreduce.application.classpath: $$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*:$$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*
+      YARN-SITE.XML_yarn.nodemanager.aux-services: mapreduce_shuffle
+      YARN-SITE.XML_yarn.nodemanager.env-whitelist: JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ,HADOOP_MAPRED_HOME

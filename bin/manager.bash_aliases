@@ -26,3 +26,8 @@ function new_file() {
     docker compose cp $(hostname):${file_path} $(dirname "${file_path}")
     docker compose cp ${file_path} "${HOST:-$(hostname)}":$(dirname "${file_path}")
 }
+
+function hdfs() {
+    HOST=hadoop execute \
+    hdfs "$@"
+}
