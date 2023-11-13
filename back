@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+function tree_clean() {
+    git diff --quiet
+}
+
+function index_clean() {
+    git diff --cached --quiet
+}
+
+function commit() {
+    git add -A &&
+        git commit -am "Save changes"
+}
+
+git add -A &&
+    tree_clean || commit &&
+    index_clean || commit &&
+    docker compose down -v &&
+    git pull --rebase &&
+    git switch -

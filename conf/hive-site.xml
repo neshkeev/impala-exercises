@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+      <property>
+        <!-- Required for automatic metadata sync. -->
+        <name>hive.metastore.dml.events</name>
+        <value>true</value>
+      </property>
+      <property>
+        <!-- User impala is not authorized to consume notifications by default, disable
+             authentication to work around this. -->
+         <name>hive.metastore.event.db.notification.api.auth</name>
+        <value>false</value>
+      </property>
+      <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://hive-metastore:9083</value>
+      </property>
+      <!-- Managed and external tablespaces must live on the Docker volumes that we
+           configure for the quickstart cluster. -->
+      <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>/user/hive/warehouse/managed</value>
+      </property>
+      <property>
+        <name>hive.metastore.warehouse.external.dir</name>
+        <value>/user/hive/warehouse/external</value>
+      </property>
+      <property>
+        <!-- Required to enable Hive transactions -->
+        <name>hive.support.concurrency</name>
+        <value>true</value>
+      </property>
+      <property>
+        <!-- Required to enable Hive transactions -->
+        <name>hive.txn.manager</name>
+        <value>org.apache.hadoop.hive.ql.lockmgr.DbTxnManager</value>
+      </property>
+      <property>
+        <!-- Use embedded Derby database -->
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>org.apache.derby.jdbc.EmbeddedDriver</value>
+      </property>
+      <property>
+        <!-- Use embedded Derby database -->
+          <!--
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:derby:;databaseName=/var/lib/hive/metastore/metastore_db;create=true</value>
+          -->
+      </property>
+      <!-- Hive stats autogathering negatively affects latency of DDL operations, etc and
+           is not particularly useful for Impala -->
+      <property>
+        <name>hive.stats.autogather</name>
+        <value>false</value>
+      </property>
+
+
+
+    <property>
+        <name>hive.server2.enable.doAs</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>hive.tez.exec.inplace.progress</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>hive.exec.scratchdir</name>
+        <value>/opt/hive/scratch_dir</value>
+    </property>
+    <property>
+        <name>hive.user.install.directory</name>
+        <value>/opt/hive/install_dir</value>
+    </property>
+    <property>
+        <name>tez.runtime.optimize.local.fetch</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.exec.submit.local.task.via.child</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>local</value>
+    </property>
+    <property>
+        <name>tez.local.mode</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.execution.engine</name>
+        <value>tez</value>
+    </property>
+    <!--
+    <property>
+        <name>metastore.warehouse.dir</name>
+        <value>/opt/hive/data/warehouse</value>
+    </property>
+    -->
+    <property>
+        <name>metastore.metastore.event.db.notification.api.auth</name>
+        <value>false</value>
+    </property>
+</configuration>

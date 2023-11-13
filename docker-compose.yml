@@ -1,0 +1,195 @@
+version: "3.8"
+
+networks:
+  compose-network:
+    name: compose-network
+
+volumes:
+  impala-warehouse:
+
+x-check-ports: &check-ports ./bin/check-ports:/bin/check-ports
+
+x-service-template: &template
+  restart: on-failure
+  networks:
+    - compose-network
+  healthcheck: &hc
+    interval: 5s
+    timeout: 3s
+    start_period: 10s
+    retries: 30
+  volumes:
+    - *check-ports
+
+x-public-key: &pub >
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILArDnLYVp+/JkcrJKHX5XDpFj2MdA6NmV09vh7DmVrD dind
+
+x-private-key: &private |+
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+  QyNTUxOQAAACCwKw5y2FafvyZHKySh1+Vw6RY9jHQOjZldPb4ew5lawwAAAJggO3ZdIDt2
+  XQAAAAtzc2gtZWQyNTUxOQAAACCwKw5y2FafvyZHKySh1+Vw6RY9jHQOjZldPb4ew5laww
+  AAAEA6oPfTO+faTshF1LXPJNKihyWNqL5QQejwBnFQ8UK4o7ArDnLYVp+/JkcrJKHX5XDp
+  Fj2MdA6NmV09vh7DmVrDAAAAD3NwYXJrLWV4ZXJjaXNlcwECAwQFBg==
+  -----END OPENSSH PRIVATE KEY-----
+
+services:
+  manager:
+    <<: *template
+    build:
+      context: .
+      dockerfile: local/Dockerfile
+    hostname: &name manager
+    container_name: *name
+    command: /usr/local/bin/entrypoint
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 8888
+    ports:
+      - "8888:8888"
+    depends_on:
+      dind:
+        condition: service_healthy
+      impala:
+        condition: service_healthy
+      hive:
+        condition: service_healthy
+    volumes:
+      - *check-ports
+      - ./bin/manager-entrypoint:/usr/local/bin/entrypoint
+      - ./bin/manager.bash_aliases:/home/jovyan/.bash_aliases
+      - ./work/work.ipynb:/home/jovyan/work/work.ipynb
+    environment:
+      NOTEBOOK_ARGS: --NotebookApp.token='' --NotebookApp.password=''
+      RESTARTABLE: yes
+      SSH_PRIVATE_KEY: *private
+      DIND_HOST: dind
+      IMPALA_HOST: impala
+      HIVE_HOST: hive
+
+  dind:
+    <<: *template
+    image: neshkeev/dind
+    hostname: &name dind
+    container_name: *name
+    command: version
+    healthcheck:
+      <<: *hc
+      test: sh /bin/check-ports 22
+    volumes:
+      - *check-ports
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/root/impala-exercises
+    environment:
+      SSH_PUB_KEY: *pub
+
+  hive-metastore:
+    <<: *template
+    image: apache/impala:81d5377c2-impala_quickstart_hms
+    hostname: &name hive-metastore
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 9083
+    command: ["hms"]
+    volumes:
+      - *check-ports
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - impala-warehouse:/var/lib/hive
+      - impala-warehouse:/user/hive/warehouse
+
+  hive:
+    <<: *template
+    image: apache/hive:3.1.3
+    hostname: &name hive
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 10000 10002
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+    volumes:
+      - *check-ports
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - impala-warehouse:/var/lib/hive
+      - impala-warehouse:/user/hive/warehouse
+    environment:
+      SERVICE_NAME: hiveserver2
+      IS_RESUME: true
+
+  statestored:
+    <<: *template
+    image: apache/impala:81d5377c2-statestored
+    hostname: &name statestored
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 25010
+    command:
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-v=1"
+    ports:
+      - "25010:25010"
+    volumes:
+      - *check-ports
+      - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+
+  catalogd:
+    <<: *template
+    image: apache/impala:81d5377c2-catalogd
+    hostname: &name catalogd
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 25020
+    command:
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-v=1"
+      - "-hms_event_polling_interval_s=1"
+      - "-invalidate_tables_timeout_s=999999"
+    ports:
+      - "25020:25020"
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+      statestored:
+        condition: service_healthy
+    volumes:
+      - *check-ports
+      - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+      - impala-warehouse:/user/hive/warehouse
+
+  impala:
+    <<: *template
+    image: apache/impala:81d5377c2-impalad_coord_exec
+    hostname: &name impala
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: bash /bin/check-ports 21000 21050 25000 28000
+    command:
+      - "-v=1"
+      - "-redirect_stdout_stderr=false"
+      - "-logtostderr"
+      - "-kudu_master_hosts=kudu-master-1:7051"
+      - "-mt_dop_auto_fallback=true"
+      - "-default_query_options=mt_dop=4,default_file_format=parquet,default_transactional_type=insert_only"
+      - "-mem_limit=4gb"
+    ports:
+      - "21000:21000"
+      - "21050:21050"
+      - "25000:25000"
+      - "28000:28000"
+    depends_on:
+      catalogd:
+        condition: service_healthy
+    volumes:
+      - *check-ports
+      - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+      - impala-warehouse:/user/hive/warehouse

@@ -19,9 +19,13 @@ function unixify() {
     done
 }
 
+function execify() {
+    chmod -R 777 ./bin
+}
+
 export MSYS_NO_PATHCONV=1
 
 unixify &&
+    execify &&
     docker compose down -v &&
-    docker compose rm -f dind &&
     docker compose up --build --remove-orphans
