@@ -193,3 +193,18 @@ services:
       - *check-ports
       - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
       - impala-warehouse:/user/hive/warehouse
+
+  maven:
+    <<: *template
+    image: maven:3.9.5-amazoncorretto-8-debian
+    hostname: &name maven
+    container_name: *name
+    healthcheck:
+      <<: *hc
+      test: 'true'
+    command:
+      - bash
+      - /bin/maven-entrypoint
+    volumes:
+      - ./src:/root/impala-exercises/src
+      - ./bin/maven-entrypoint:/bin/maven-entrypoint

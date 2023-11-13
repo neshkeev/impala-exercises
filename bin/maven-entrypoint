@@ -1,0 +1,5 @@
+#! /usr/bin/env bash
+
+cd /root/impala-exercises/src && mvn clean package && tail -f /dev/null
+
+      

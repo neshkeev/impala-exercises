@@ -1,9 +1,12 @@
 #! /usr/bin/env bash
 
+BASE_DIR=$(dirname $0)
+
 container=${1:-manager}
 
 function get_status() {
-    docker compose ps ${container} --format '{{.Status}}' |
+    docker compose -f $BASE_DIR/docker-compose.yml ps ${container} \
+        --format '{{.Status}}' |
         grep -o "\b(unhealty\|healthy\|starting)\b"
 }
 
