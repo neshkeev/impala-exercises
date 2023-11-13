@@ -1,0 +1,5 @@
+#! /usr/bin/env bash
+
+cp /data-load-entrypoint.sh /tmp &&
+    sed -i 's,docker_impalad-1_1,$IMPALA_HOST,g' /tmp/data-load-entrypoint.sh &&
+    bash /tmp/data-load-entrypoint.sh load_tpcds

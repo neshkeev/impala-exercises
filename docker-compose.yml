@@ -193,3 +193,24 @@ services:
       - *check-ports
       - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
       - impala-warehouse:/user/hive/warehouse
+
+  loader:
+    <<: *template
+    image: apache/impala:81d5377c2-impala_quickstart_client
+    hostname: &name loader
+    container_name: *name
+    entrypoint:
+      - bash
+      - /bin/entrypoint
+    healthcheck:
+      <<: *hc
+      test: 'true'
+    depends_on:
+      impala:
+        condition: service_healthy
+    volumes:
+      - ./bin/loader-entrypoint:/bin/entrypoint
+      - ./conf/hive-site.xml:/opt/impala/conf/hive-site.xml:ro
+      - impala-warehouse:/user/hive/warehouse
+    environment:
+      IMPALA_HOST: impala
