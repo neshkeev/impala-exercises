@@ -1,0 +1,36 @@
+#! /usr/bin/env bash
+
+container=${1:-manager}
+
+function get_status() {
+    docker compose ps ${container} --format '{{.Status}}' |
+        grep -o "\b(unhealty\|healthy\|starting)\b"
+}
+
+function decision() {
+    local status=${1}
+    local service=${2}
+
+    case "${status}" in
+        "healthy")
+            echo "The service '${service}' is ready to go"
+            return 0
+            ;;
+        "unhealthy")
+            echo "The service '${service}' hasn't been started properly. A restart can help"
+            return 1
+            ;;
+        "starting")
+            echo "The service '${service}' about to be started"
+            return 1
+            ;;
+        *)
+            echo "The service '${service}' hasn't been started yet, please wait"
+            return 1
+            ;;
+    esac
+}
+
+status=$(get_status "$container")
+
+decision "$status" "$container"

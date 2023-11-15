@@ -1,0 +1,27 @@
+#! /usr/bin/env bash
+
+function error() {
+    echo "[ERROR] $@" >&2
+    return 1
+}
+
+function dos2unix() {
+    local path=${1}
+
+    [ -r "${path}" ] && 
+        sed -i 's,\r$,,' ${path} || 
+        error "No '${path}' found available to read"
+}
+
+function unixify() {
+    for file_path in $(ls ./bin/*); do
+        dos2unix "$file_path" || return 1
+    done
+}
+
+export MSYS_NO_PATHCONV=1
+
+unixify &&
+    docker compose down -v &&
+    docker compose rm -f dind &&
+    docker compose up --build --remove-orphans

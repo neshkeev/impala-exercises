@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+next_branch=${1:-$(awk '{print $1}' <./.next)}
+
+function tree_clean() {
+    git diff --quiet
+}
+
+function index_clean() {
+    git diff --cached --quiet
+}
+
+function commit() {
+    git add -A &&
+        git commit -am "Save changes"
+}
+
+git add -A &&
+    tree_clean || commit &&
+    index_clean || commit &&
+    docker compose down -v &&
+    git pull --rebase &&
+    git checkout "${next_branch}"
